@@ -14,6 +14,32 @@ export const ReceiptProcessor = () => {
     total: number;
   } | null>(null);
   const { toast } = useToast();
+  const [folderSelected, setFolderSelected] = useState(false);
+
+  const handleFolderSelect = async () => {
+    try {
+      const response = await fetch("http://localhost:5001/select-folder", {
+        method: "POST",
+      });
+
+      if (!response.ok) throw new Error("Folder selection failed");
+
+      const data = await response.json();
+      if (data.success) {
+        setFolderSelected(true);
+        toast({
+          title: "Folder Selected",
+          description: "Receipt folder has been selected successfully.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to select folder. Please try again.",
+      });
+    }
+  };
 
   const handleProcess = async () => {
     try {
@@ -71,8 +97,20 @@ export const ReceiptProcessor = () => {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <Button
-              onClick={handleProcess}
+              onClick={handleFolderSelect}
               disabled={processing}
+              variant="outline"
+              className="w-full h-12 text-lg font-medium border-2 border-dashed"
+            >
+              <span className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5" />
+                Select Receipt Folder
+              </span>
+            </Button>
+
+            <Button
+              onClick={handleProcess}
+              disabled={processing || !folderSelected}
               className="w-full h-12 text-lg font-medium bg-neutral-800 hover:bg-neutral-900 transition-colors"
             >
               {processing ? (
