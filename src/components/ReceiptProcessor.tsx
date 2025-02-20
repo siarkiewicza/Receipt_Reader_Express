@@ -21,7 +21,7 @@ export const ReceiptProcessor = () => {
       setProgress(0);
       setSummary(null);
 
-      const response = await fetch("http://localhost:3000/process", {
+      const response = await fetch("http://localhost:5001/process", {
         method: "POST",
       });
 
