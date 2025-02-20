@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, FolderOpen, FileCheck2 } from "lucide-react";
+import { Upload, FolderOpen, FileCheck2, Inbox } from "lucide-react";
 
 export const ReceiptProcessor = () => {
   const [processing, setProcessing] = useState(false);
@@ -53,16 +53,21 @@ export const ReceiptProcessor = () => {
 
       if (!response.ok) throw new Error("Processing failed");
 
-      // Simulate progress updates - replace with real WebSocket/SSE connection
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 500);
+      // Set up event source for progress updates
+      const eventSource = new EventSource("http://localhost:5002/progress");
+      
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setProgress(data.progress);
+        
+        if (data.progress === 100) {
+          eventSource.close();
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+      };
 
       const data = await response.json();
       setSummary({
@@ -82,6 +87,25 @@ export const ReceiptProcessor = () => {
       });
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const openOutputFolder = () => {
+    // This will be replaced with the actual path later
+    const outputPath = "/Volumes/Local/New_Documents/Recipt_Reader_Project/data/output";
+    
+    try {
+      window.open(`file://${outputPath}`, '_blank');
+      toast({
+        title: "Opening Output Folder",
+        description: "The output folder should open in your file explorer.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to open output folder. Please check the path.",
+      });
     }
   };
 
@@ -114,7 +138,10 @@ export const ReceiptProcessor = () => {
               className="w-full h-12 text-lg font-medium bg-neutral-800 hover:bg-neutral-900 transition-colors"
             >
               {processing ? (
-                "Processing..."
+                <span className="flex items-center gap-2">
+                  <Upload className="w-5 h-5 animate-spin" />
+                  Processing... {progress}%
+                </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Upload className="w-5 h-5" />
@@ -124,17 +151,16 @@ export const ReceiptProcessor = () => {
             </Button>
 
             {processing && (
-              <div className="space-y-2 animate-slide-up">
-                <div className="flex justify-between text-sm text-neutral-600">
-                  <span>Processing receipts...</span>
-                  <span>{progress}%</span>
-                </div>
+              <div className="space-y-2 animate-fade-in">
                 <Progress value={progress} className="h-2" />
+                <p className="text-sm text-center text-neutral-600">
+                  Processing receipts... {progress}%
+                </p>
               </div>
             )}
 
             {summary && (
-              <div className="rounded-lg bg-neutral-100 p-4 space-y-2 animate-fade-in">
+              <div className="rounded-lg bg-neutral-100 p-4 space-y-4 animate-fade-in">
                 <h3 className="font-medium text-neutral-800">Summary</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
@@ -150,6 +176,16 @@ export const ReceiptProcessor = () => {
                     <p className="text-sm text-neutral-600">Total Files</p>
                   </div>
                 </div>
+                <Button
+                  onClick={openOutputFolder}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <span className="flex items-center gap-2">
+                    <Inbox className="w-5 h-5" />
+                    Open Output Folder
+                  </span>
+                </Button>
               </div>
             )}
           </div>
