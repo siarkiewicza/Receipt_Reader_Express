@@ -1,21 +1,54 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, FolderOpen, FileCheck2, Inbox } from "lucide-react";
+import { Upload, FolderOpen, FileCheck2, Download, List } from "lucide-react";
+
+interface Receipt {
+  id: string;
+  filename: string;
+  status: 'pending' | 'processed';
+  date?: string;
+}
 
 export const ReceiptProcessor = () => {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [summary, setSummary] = useState<{
     processed: number;
     total: number;
   } | null>(null);
   const { toast } = useToast();
   const [folderSelected, setFolderSelected] = useState(false);
-  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5003';
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5003';
+
+  // Fetch receipts on component mount
+  useEffect(() => {
+    fetchReceipts();
+  }, []);
+
+  const fetchReceipts = async () => {
+    try {
+      console.log('Fetching receipts from:', `${baseUrl}/api/receipts`);
+      const response = await fetch(`${baseUrl}/api/receipts`);
+      
+      if (!response.ok) throw new Error("Failed to fetch receipts");
+      
+      const data = await response.json();
+      console.log('Receipts data:', data);
+      setReceipts(data);
+    } catch (error) {
+      console.error('Error fetching receipts:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch receipts list.",
+      });
+    }
+  };
 
   const handleFolderSelect = async () => {
     try {
@@ -35,6 +68,8 @@ export const ReceiptProcessor = () => {
       
       if (data.success) {
         setFolderSelected(true);
+        // Upload files after folder selection
+        await handleUpload();
         toast({
           title: "Folder Selected",
           description: "Receipt folder has been selected successfully.",
@@ -46,6 +81,38 @@ export const ReceiptProcessor = () => {
         variant: "destructive",
         title: "Error",
         description: "Failed to select folder. Please try again.",
+      });
+    }
+  };
+
+  const handleUpload = async () => {
+    try {
+      console.log('Uploading files to:', `${baseUrl}/upload`);
+      const response = await fetch(`${baseUrl}/upload`, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const data = await response.json();
+      console.log('Upload response:', data);
+      
+      // Refresh receipts list after upload
+      await fetchReceipts();
+      
+      toast({
+        title: "Upload Complete",
+        description: "Files have been uploaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to upload files. Please try again.",
       });
     }
   };
@@ -76,6 +143,7 @@ export const ReceiptProcessor = () => {
         
         if (data.progress === 100) {
           eventSource.close();
+          fetchReceipts(); // Refresh receipts list after processing
         }
       };
 
@@ -107,21 +175,36 @@ export const ReceiptProcessor = () => {
     }
   };
 
-  const openOutputFolder = () => {
-    // This will be replaced with the actual path later
-    const outputPath = "/Volumes/Local/New_Documents/Recipt_Reader_Project/data/output";
-    
+  const handleDownload = async () => {
     try {
-      window.open(`file://${outputPath}`, '_blank');
+      console.log('Downloading from:', `${baseUrl}/download`);
+      const response = await fetch(`${baseUrl}/download`);
+      
+      if (!response.ok) throw new Error("Download failed");
+      
+      // Create a blob from the response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary link and trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'processed_receipts.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
       toast({
-        title: "Opening Output Folder",
-        description: "The output folder should open in your file explorer.",
+        title: "Download Started",
+        description: "Your processed receipts file is being downloaded.",
       });
     } catch (error) {
+      console.error('Error downloading file:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to open output folder. Please check the path.",
+        description: "Failed to download processed receipts.",
       });
     }
   };
@@ -176,6 +259,32 @@ export const ReceiptProcessor = () => {
               </div>
             )}
 
+            {receipts.length > 0 && (
+              <div className="rounded-lg bg-neutral-100 p-4 space-y-4 animate-fade-in">
+                <h3 className="font-medium text-neutral-800 flex items-center gap-2">
+                  <List className="w-4 h-4" />
+                  Receipts List
+                </h3>
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {receipts.map((receipt) => (
+                    <div
+                      key={receipt.id}
+                      className="bg-white p-3 rounded-md flex justify-between items-center"
+                    >
+                      <span className="text-sm">{receipt.filename}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        receipt.status === 'processed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {receipt.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {summary && (
               <div className="rounded-lg bg-neutral-100 p-4 space-y-4 animate-fade-in">
                 <h3 className="font-medium text-neutral-800">Summary</h3>
@@ -194,13 +303,13 @@ export const ReceiptProcessor = () => {
                   </div>
                 </div>
                 <Button
-                  onClick={openOutputFolder}
+                  onClick={handleDownload}
                   variant="outline"
                   className="w-full"
                 >
                   <span className="flex items-center gap-2">
-                    <Inbox className="w-5 h-5" />
-                    Open Output Folder
+                    <Download className="w-5 h-5" />
+                    Download Processed Receipts
                   </span>
                 </Button>
               </div>
