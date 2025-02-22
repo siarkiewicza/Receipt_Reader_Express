@@ -15,12 +15,16 @@ export const ReceiptProcessor = () => {
   } | null>(null);
   const { toast } = useToast();
   const [folderSelected, setFolderSelected] = useState(false);
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5003';
 
   const handleFolderSelect = async () => {
     try {
-      console.log('Making request to:', `${import.meta.env.VITE_BACKEND_URL}/select-folder`);
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/select-folder`, {
+      console.log('Making request to:', `${baseUrl}/select-folder`);
+      const response = await fetch(`${baseUrl}/select-folder`, {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       console.log('Response:', response);
@@ -52,15 +56,18 @@ export const ReceiptProcessor = () => {
       setProgress(0);
       setSummary(null);
 
-      console.log('Making process request to:', `${import.meta.env.VITE_BACKEND_URL}/process`);
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/process`, {
+      console.log('Making process request to:', `${baseUrl}/process`);
+      const response = await fetch(`${baseUrl}/process`, {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) throw new Error("Processing failed");
 
-      console.log('Setting up EventSource at:', `${import.meta.env.VITE_BACKEND_URL}/progress`);
-      const eventSource = new EventSource(`${import.meta.env.VITE_BACKEND_URL}/progress`);
+      console.log('Setting up EventSource at:', `${baseUrl}/progress`);
+      const eventSource = new EventSource(`${baseUrl}/progress`);
       
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
