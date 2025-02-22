@@ -18,7 +18,7 @@ export const ReceiptProcessor = () => {
 
   const handleFolderSelect = async () => {
     try {
-      const response = await fetch("http://localhost:5002/select-folder", {
+      const response = await fetch("http://localhost:5003/select-folder", {
         method: "POST",
       });
 
@@ -47,14 +47,14 @@ export const ReceiptProcessor = () => {
       setProgress(0);
       setSummary(null);
 
-      const response = await fetch("http://localhost:5002/process", {
+      const response = await fetch("http://localhost:5003/process", {
         method: "POST",
       });
 
       if (!response.ok) throw new Error("Processing failed");
 
       // Set up event source for progress updates
-      const eventSource = new EventSource("http://localhost:5002/progress");
+      const eventSource = new EventSource("http://localhost:5003/progress");
       
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
