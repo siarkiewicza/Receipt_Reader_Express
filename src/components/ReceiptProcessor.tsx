@@ -18,13 +18,17 @@ export const ReceiptProcessor = () => {
 
   const handleFolderSelect = async () => {
     try {
+      console.log('Making request to:', `${import.meta.env.VITE_BACKEND_URL}/select-folder`);
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/select-folder`, {
         method: "POST",
       });
 
+      console.log('Response:', response);
       if (!response.ok) throw new Error("Folder selection failed");
 
       const data = await response.json();
+      console.log('Response data:', data);
+      
       if (data.success) {
         setFolderSelected(true);
         toast({
@@ -33,6 +37,7 @@ export const ReceiptProcessor = () => {
         });
       }
     } catch (error) {
+      console.error('Error in handleFolderSelect:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -47,17 +52,19 @@ export const ReceiptProcessor = () => {
       setProgress(0);
       setSummary(null);
 
+      console.log('Making process request to:', `${import.meta.env.VITE_BACKEND_URL}/process`);
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/process`, {
         method: "POST",
       });
 
       if (!response.ok) throw new Error("Processing failed");
 
-      // Set up event source for progress updates
+      console.log('Setting up EventSource at:', `${import.meta.env.VITE_BACKEND_URL}/progress`);
       const eventSource = new EventSource(`${import.meta.env.VITE_BACKEND_URL}/progress`);
       
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('Progress update:', data);
         setProgress(data.progress);
         
         if (data.progress === 100) {
@@ -65,11 +72,13 @@ export const ReceiptProcessor = () => {
         }
       };
 
-      eventSource.onerror = () => {
+      eventSource.onerror = (error) => {
+        console.error('EventSource error:', error);
         eventSource.close();
       };
 
       const data = await response.json();
+      console.log('Process response data:', data);
       setSummary({
         processed: data.processed || 0,
         total: data.total || 0,
@@ -80,6 +89,7 @@ export const ReceiptProcessor = () => {
         description: `Successfully processed ${data.processed} receipts.`,
       });
     } catch (error) {
+      console.error('Error in handleProcess:', error);
       toast({
         variant: "destructive",
         title: "Error",
