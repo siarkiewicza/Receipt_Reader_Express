@@ -1,3 +1,5 @@
+![the interface](images/Receipt_Reader.png)
+
 # Welcome to your Lovable project
 
 ## Project info
@@ -68,5 +70,5 @@ Simply open [Lovable](https://lovable.dev/projects/a12d7357-88e0-4f5c-90b6-23c66
 
 We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
 
-![the interface](images/Receipt_Reader.png)
+
 
